@@ -23,7 +23,7 @@ describe("Authenticate User UseCase", () => {
       email: user.email,
       password: user.password,
     });
-    console.log(response)
+
     expect(response).toHaveProperty('token');
     expect(response).toHaveProperty('user');
     expect(response.user).toEqual(
