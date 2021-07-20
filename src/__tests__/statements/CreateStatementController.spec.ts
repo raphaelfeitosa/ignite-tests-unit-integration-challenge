@@ -2,14 +2,24 @@ import request from "supertest";
 import createConnection from "../../database/index";
 import { Connection } from "typeorm";
 import { app } from "../../app";
+import { IUsersRepository } from "../../modules/users/repositories/IUsersRepository";
+import { CreateUserUseCase } from "../../modules/users/useCases/createUser/CreateUserUseCase";
+import { InMemoryUsersRepository } from "../../modules/users/repositories/in-memory/InMemoryUsersRepository";
 
 let connection: Connection;
+
+let inMemoryUsersRepository: IUsersRepository;
+
+let createUserUseCase: CreateUserUseCase;
 
 describe("Create Statements", () => {
 
   beforeAll(async () => {
     connection = await createConnection();
     await connection.runMigrations();
+
+    inMemoryUsersRepository = new InMemoryUsersRepository();
+    createUserUseCase = new CreateUserUseCase(inMemoryUsersRepository);
   });
 
   afterAll(async () => {
@@ -25,11 +35,16 @@ describe("Create Statements", () => {
 
   const deposit = {
     description: "Amount",
-    amount: 100
+    amount: 500
   }
 
   const withdraw = {
     description: "withdraw",
+    amount: 100
+  }
+
+  const transfer = {
+    description: "transfer",
     amount: 100
   }
 
@@ -43,6 +58,9 @@ describe("Create Statements", () => {
 
   it("should be able create an deposit", async () => {
 
+    await request(app).post("/api/v1/users")
+      .send(user);
+
     const responseToken = await request(app).post("/api/v1/sessions")
       .send({
         email: user.email,
@@ -50,7 +68,9 @@ describe("Create Statements", () => {
       });
 
     const user_id = responseToken.body.user.id;
-    const { token } = responseToken.body
+    console.log(user_id);
+    const { token } = responseToken.body;
+    console.log(token);
 
     const responseDeposit = await request(app)
       .post("/api/v1/statements/deposit")
@@ -59,7 +79,9 @@ describe("Create Statements", () => {
       })
       .send(deposit);
 
-    expect(responseDeposit.body).toHaveProperty("id");
+    console.log(responseDeposit.body);
+
+    // expect(responseDeposit.body).toHaveProperty("id");
     expect(responseDeposit.body.user_id).toEqual(user_id);
     expect(responseDeposit.status).toBe(201);
   });
@@ -363,30 +385,4 @@ describe("Create Statements", () => {
 
     expect(responseWithdraw.status).toBe(500);
   });
-
-  // it("should not be able to create a withdraw if the balance is insufficient", async () => {
-  //   const responseToken = await request(app).post("/api/v1/sessions")
-  //     .send({
-  //       email: user.email,
-  //       password: user.password
-  //     });
-
-  //   const { token } = responseToken.body;
-
-  //   const withdraw = {
-  //     amount: 100,
-  //     description: "withdraw test",
-  //   };
-
-  //   const responseWithdraw = await request(app)
-  //     .post("/api/v1/statements/withdraw")
-  //     .send(withdraw)
-  //     .set({
-  //       Authorization: `Bearer ${token}`,
-  //     });
-
-  //   //expect(responseWithdraw.body.message).toEqual("Insufficient funds");
-  //   expect(responseWithdraw.status).toBe(400);
-  // });
-
 });
